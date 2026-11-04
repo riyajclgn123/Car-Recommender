@@ -43,7 +43,12 @@ NUMERIC_COLS = [
     "maximum_seating",
     "latitude",
     "longitude",
+    # Encoded categoricals — integers after encoding, must scale for linear models
+    "make_name", "model_name", "trim_name", "body_type",
+    "fuel_type", "engine_type", "engine_cylinders",
+    "transmission", "wheel_system",
 ]
+
 
 # Categorical features — will be LabelEncoded
 CATEGORICAL_COLS = [
