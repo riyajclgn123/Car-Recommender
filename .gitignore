@@ -1,0 +1,9 @@
+data/raw/
+data/interim/
+data/processed/
+__pycache__/
+*.pyc
+.env
+mlruns/
+*.egg-info/
+.ipynb_checkpoints/
