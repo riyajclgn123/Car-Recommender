@@ -1,0 +1,22 @@
+{
+  "age_brackets": [
+    {"min_age": 0,  "max_age": 2,  "label": "0-2yr"},
+    {"min_age": 3,  "max_age": 5,  "label": "3-5yr"},
+    {"min_age": 6,  "max_age": 10, "label": "6-10yr"},
+    {"min_age": 11, "max_age": 99, "label": "11+yr"}
+  ],
+  "brand_tier": {
+    "excellent": ["Toyota", "Honda", "Mazda", "Lexus", "Acura"],
+    "good":      ["Subaru", "Hyundai", "Kia", "Buick", "Nissan"],
+    "average":   ["Ford", "Chevrolet", "GMC", "Chrysler", "Jeep",
+                  "Dodge", "Volkswagen", "Mini"],
+    "poor":      ["BMW", "Mercedes-Benz", "Audi", "Cadillac",
+                  "Volvo", "Land Rover", "Jaguar", "Alfa Romeo"]
+  },
+  "costs": {
+    "excellent": {"0-2yr": 400,  "3-5yr": 600,  "6-10yr": 900,  "11+yr": 1400},
+    "good":      {"0-2yr": 500,  "3-5yr": 800,  "6-10yr": 1200, "11+yr": 1800},
+    "average":   {"0-2yr": 600,  "3-5yr": 1000, "6-10yr": 1400, "11+yr": 2200},
+    "poor":      {"0-2yr": 900,  "3-5yr": 1500, "6-10yr": 2500, "11+yr": 4000}
+  }
+}

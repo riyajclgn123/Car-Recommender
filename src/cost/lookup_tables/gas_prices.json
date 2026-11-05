@@ -1,0 +1,27 @@
+{
+  "northeast": 3.45,
+  "midwest":   3.15,
+  "south":     3.05,
+  "west":      4.10,
+  "default":   3.20,
+  "state_to_region": {
+    "CT": "northeast", "ME": "northeast", "MA": "northeast",
+    "NH": "northeast", "RI": "northeast", "VT": "northeast",
+    "NJ": "northeast", "NY": "northeast", "PA": "northeast",
+    "IL": "midwest",   "IN": "midwest",   "MI": "midwest",
+    "OH": "midwest",   "WI": "midwest",   "IA": "midwest",
+    "KS": "midwest",   "MN": "midwest",   "MO": "midwest",
+    "NE": "midwest",   "ND": "midwest",   "SD": "midwest",
+    "AL": "south",     "AR": "south",     "FL": "south",
+    "GA": "south",     "KY": "south",     "LA": "south",
+    "MS": "south",     "NC": "south",     "SC": "south",
+    "TN": "south",     "VA": "south",     "WV": "south",
+    "TX": "south",     "OK": "south",     "MD": "south",
+    "DE": "south",     "DC": "south",
+    "AK": "west",      "AZ": "west",      "CA": "west",
+    "CO": "west",      "HI": "west",      "ID": "west",
+    "MT": "west",      "NV": "west",      "NM": "west",
+    "OR": "west",      "UT": "west",      "WA": "west",
+    "WY": "west"
+  }
+}
