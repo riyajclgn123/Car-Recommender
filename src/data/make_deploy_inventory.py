@@ -1,27 +1,57 @@
 """
 src/data/make_deploy_inventory.py
-Small inventory for the live server: only the columns /recommend uses,
-all Carvana rows (newer cars) + a sample of CarGurus rows.
+Builds the slim inventory the live API serves, with REAL fair-price
+predictions computed once, offline (batch scoring).
+
+- CarGurus rows: only cars from the val/test splits, which the model never
+  trained on, so "deal" scores are honest out-of-sample estimates.
+- Carvana rows: specs are placeholders, so predicted_price stays null
+  (shown as "no estimate yet") rather than a made-up number.
 
 Run:
     python -m src.data.make_deploy_inventory
 """
+import joblib
+import numpy as np
 import polars as pl
+from src.models.inference import load_meta, predict_prices
 
-COLS = [
-    "vin", "price", "year", "make_name", "model_name", "trim_name",
-    "body_type", "wheel_system", "maximum_seating", "is_new", "mileage",
-    "city_fuel_economy", "highway_fuel_economy",
+PROC = "data/processed"
+
+KEEP = [
+    "vin", "price", "predicted_price", "year", "make_name", "model_name",
+    "trim_name", "body_type", "wheel_system", "maximum_seating", "is_new",
+    "mileage", "city_fuel_economy", "highway_fuel_economy",
 ]
 
-df = pl.read_parquet("data/processed/inventory.parquet").select(COLS)
+inv = pl.read_parquet(f"{PROC}/inventory.parquet")
 
-carvana  = df.filter(pl.col("vin").str.starts_with("CVN_"))
-cargurus = df.filter(~pl.col("vin").str.starts_with("CVN_"))
+# Out-of-sample CarGurus cars only
+holdout_vins = pl.concat([
+    pl.read_parquet(f"{PROC}/val.parquet").select("vin"),
+    pl.read_parquet(f"{PROC}/test.parquet").select("vin"),
+])
+cargurus = inv.join(holdout_vins, on="vin", how="semi")
 cargurus = cargurus.sample(n=min(80_000, len(cargurus)), seed=42)
 
-deploy = pl.concat([carvana, cargurus])
-deploy.write_parquet("data/processed/inventory_deploy.parquet", compression="zstd")
+carvana = inv.filter(pl.col("vin").str.starts_with("CVN_"))
 
-print(f"Carvana: {len(carvana):,}  CarGurus sample: {len(cargurus):,}  "
-      f"Total: {len(deploy):,}")
+# Batch scoring with the shared, parity-tested inference code
+model = joblib.load("models/lgbm_tuned.pkl")
+meta = load_meta()
+preds = predict_prices(cargurus, model, meta)
+cargurus = cargurus.with_columns(pl.Series("predicted_price", preds))
+carvana = carvana.with_columns(pl.lit(None, dtype=pl.Float64).alias("predicted_price"))
+
+deploy = pl.concat([cargurus.select(KEEP), carvana.select(KEEP)])
+deploy.write_parquet(f"{PROC}/inventory_deploy.parquet", compression="zstd")
+
+# Sanity report
+actual = cargurus["price"].to_numpy()
+mae = np.mean(np.abs(preds - actual))
+below = np.mean(actual < preds * 0.95) * 100
+above = np.mean(actual > preds * 1.05) * 100
+print(f"CarGurus (out-of-sample): {len(cargurus):,}  MAE ${mae:,.0f}")
+print(f"Listed >5% below fair price: {below:.1f}%   >5% above: {above:.1f}%")
+print(f"Carvana (no estimate yet): {len(carvana):,}")
+print(f"Total: {len(deploy):,} → {PROC}/inventory_deploy.parquet")

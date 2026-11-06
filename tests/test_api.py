@@ -114,9 +114,9 @@ def test_recommend_family():
 
     # Hard check: no result over budget
     for rec in data["recommendations"]:
-        assert rec["predicted_price"] <= data["budget_max_price"], \
+        assert rec["listing_price"] <= data["budget_max_price"], \
             f"Budget violation: {rec['make_name']} {rec['model_name']} " \
-            f"${rec['predicted_price']:,.0f} > ${data['budget_max_price']:,.0f}"
+            f"${rec['listing_price']:,.0f} > ${data['budget_max_price']:,.0f}"
         assert rec["why"] != ""
     print(f"\n  Family top pick: "
           f"{data['recommendations'][0]['make_name']} "
@@ -143,7 +143,7 @@ def test_recommend_budget_never_violated():
         assert r.status_code == 200
         data = r.json()
         for rec in data["recommendations"]:
-            assert rec["predicted_price"] <= data["budget_max_price"]
+            assert rec["listing_price"] <= data["budget_max_price"]
 
 
 def test_recommend_invalid_age_group():

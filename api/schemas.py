@@ -100,6 +100,7 @@ class CarRecommendation(BaseModel):
     year:             int
     listing_price:    float
     predicted_price:  float
+    has_fair_price:   bool = True
     tco_5yr:          float
     monthly_cost:     float
     total_score:      float

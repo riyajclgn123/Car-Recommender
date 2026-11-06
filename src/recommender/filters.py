@@ -57,7 +57,7 @@ def apply_hard_filters(
     before = len(df)
 
     # 1. Price filter — never exceed budget
-    df = df.filter(pl.col("predicted_price") <= budget["max_price"])
+    df = df.filter(pl.col("price") <= budget["max_price"])
     log.info(f"  After price filter (≤${budget['max_price']:,}): {len(df):,} cars")
 
     # 2. Maintenance filter
