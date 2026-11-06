@@ -1,4 +1,5 @@
 {
+  "data_source": "NHTS 2022 (FHWA), vehv2pub + perv2pub, survey-weighted, vehicles <= 5 yrs old",
   "age_map": {
     "18-34": 0,
     "35-54": 1,
@@ -17,11 +18,13 @@
   },
   "classes": [
     "minivan_van",
-    "other",
     "pickup",
     "sedan",
     "suv_crossover"
   ],
-  "macro_f1": 0.1545619221848297,
-  "log_loss": 1.4310223766957386
+  "model": "logistic_regression_onehot",
+  "heldout_weighted_log_loss": 1.0875,
+  "heldout_macro_f1": 0.235,
+  "prior_baseline_log_loss": 1.1238,
+  "income_band_note": "low < $35k, middle $35k-$100k, high > $100k (NHTS bins)"
 }
