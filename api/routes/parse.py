@@ -1,10 +1,15 @@
 """
 api/routes/parse.py
 Free-text intake with NO LLM and NO API key.
-Rule-based extraction → validated profile for /recommend.
+Rule-based extraction -> validated profile for /recommend.
+If the rules can't find an income AND GROQ_API_KEY is set, falls back to
+Groq's free tier. The key lives only on the server, never in the frontend.
 Anything it had to guess is listed in "assumed" so the user can fix it.
 """
+import os
 import re
+import json
+import httpx
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field, ValidationError
 from api.schemas import RecommendRequest
@@ -33,7 +38,7 @@ STATE_NAMES = {
     "west virginia": "WV", "wisconsin": "WI", "wyoming": "WY",
 }
 STATE_CODES = set(STATE_NAMES.values())
-# Codes that are also common English words — only trust them after a comma
+# Codes that are also common English words: only trust them after a comma
 AMBIGUOUS_CODES = {"OK", "IN", "ME", "OR", "HI"}
 
 CITY_STATE = {
@@ -54,7 +59,10 @@ MONEY = re.compile(
     r"(\$)?(\d[\d,]*(?:\.\d+)?)\s*(k\b|grand\b)?"
     r"(?:\s*(?:/|a|an|per|each)?\s*(year|yr|annual(?:ly)?|month|monthly|mo)\b)?"
 )
-INCOME_WORDS = re.compile(r"\b(make|making|earn|earning|income|salary|paid)\b")
+INCOME_WORDS = re.compile(
+    r"\b(make|making|earn|earning|income|salary|paid|pension|"
+    r"social security|receive|bring in|take home)\b"
+)
 
 
 def _num(s):
@@ -63,7 +71,7 @@ def _num(s):
 
 def _to_monthly(m):
     _, num, k, period = m.groups()
-    v = float(num.replace(",", ""))
+    v = float(num.replace(",", "").rstrip("."))
     if k:
         v *= 1000
     if period:
@@ -74,7 +82,7 @@ def _to_monthly(m):
 def find_monthly_income(t):
     matches = list(MONEY.finditer(t))
     kw_ends = [k.end() for k in INCOME_WORDS.finditer(t)]
-    # 1) a number shortly after "make/earn/salary"
+    # 1) a number shortly after "make / earn / pension ..."
     for m in matches:
         if any(0 <= m.start() - e <= 30 for e in kw_ends):
             v = _to_monthly(m)
@@ -99,9 +107,12 @@ def find_age(t):
 
 
 def age_to_group(age):
-    if age < 35: return "18-34"
-    if age < 55: return "35-54"
-    if age < 65: return "55-64"
+    if age < 35:
+        return "18-34"
+    if age < 55:
+        return "35-54"
+    if age < 65:
+        return "55-64"
     return "65+"
 
 
@@ -120,7 +131,7 @@ def find_household(t):
 def find_state(t, original):
     for city, st in CITY_STATE.items():
         if re.search(rf"\b{city}\b", t):
-            return st, True                   # a city → also urban
+            return st, True                   # a city also means urban
     for name in sorted(STATE_NAMES, key=len, reverse=True):  # "west virginia" before "virginia"
         if re.search(rf"\b{name}\b", t):
             return STATE_NAMES[name], False
@@ -160,6 +171,50 @@ def find_maintenance(t):
     return None
 
 
+# ── Optional Groq fallback (free tier, server-side key only) ─────────────────
+GROQ_URL = "https://api.groq.com/openai/v1/chat/completions"
+GROQ_MODEL = os.getenv("GROQ_MODEL", "llama-3.1-8b-instant")
+
+GROQ_PROMPT = """Extract a US car buyer profile from the text below.
+Return ONLY a JSON object, no explanation, no markdown.
+
+Text: "{text}"
+
+JSON shape:
+{{
+  "monthly_income": <number, gross monthly USD; divide annual by 12>,
+  "max_maintenance_monthly": <number, default 150>,
+  "household_size": <integer 1-10, default 1>,
+  "age_group": <one of "18-34","35-54","55-64","65+">,
+  "income_band": <"low" if under $40k/yr, "middle" if $40k-$100k, "high" if over>,
+  "area_type": <one of "urban","suburban","rural">,
+  "state": <2-letter US state code>,
+  "prefer_new": <true, false, or null>
+}}"""
+
+
+def groq_parse(text):
+    """Return a dict from Groq, or None if no key / any failure."""
+    key = os.getenv("GROQ_API_KEY")
+    if not key:
+        return None
+    try:
+        r = httpx.post(
+            GROQ_URL,
+            headers={"Authorization": f"Bearer {key}"},
+            json={"model": GROQ_MODEL, "temperature": 0, "max_tokens": 300,
+                  "messages": [{"role": "user",
+                                "content": GROQ_PROMPT.format(text=text)}]},
+            timeout=15,
+        )
+        r.raise_for_status()
+        raw = r.json()["choices"][0]["message"]["content"]
+        m = re.search(r"\{.*\}", raw, re.S)
+        return json.loads(m.group()) if m else None
+    except (httpx.HTTPError, KeyError, IndexError, json.JSONDecodeError):
+        return None
+
+
 @router.post("/parse-profile")
 def parse_profile(req: ParseRequest):
     t = req.text.lower()
@@ -167,6 +222,16 @@ def parse_profile(req: ParseRequest):
 
     income = find_monthly_income(t)
     if income is None:
+        # Rules failed: try the free LLM, but still validate its output
+        llm = groq_parse(req.text)
+        if llm:
+            try:
+                profile = RecommendRequest(**llm)
+                out = profile.model_dump(exclude={"n_candidates"})
+                out["assumed"] = ["read by AI, so double-check every field"]
+                return out
+            except ValidationError:
+                pass
         raise HTTPException(422, "I couldn't find your income. Add something "
                                  "like '$55k a year' or '$4,000 a month'.")
 
@@ -210,7 +275,7 @@ def parse_profile(req: ParseRequest):
         "prefer_new": find_prefer_new(t),
     }
 
-    # Validate with the SAME schema /recommend uses
+    # Never trust parsed output: validate with the SAME schema /recommend uses
     try:
         profile = RecommendRequest(**data)
     except ValidationError as e:

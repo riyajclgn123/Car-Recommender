@@ -9,3 +9,5 @@ mlruns/
 .ipynb_checkpoints/
 
 .venv/
+mlflow.db
+runs/

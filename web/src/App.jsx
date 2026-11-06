@@ -5,7 +5,6 @@ import { getRecommendations, parseProfileFromText } from "./api"
 const AGE_GROUPS   = ["18-34", "35-54", "55-64", "65+"]
 const INCOME_BANDS = ["low", "middle", "high"]
 const AREA_TYPES   = ["urban", "suburban", "rural"]
-const [notice,     setNotice]     = useState(null)
 const US_STATES    = [
   "AL","AK","AZ","AR","CA","CO","CT","DE","FL","GA",
   "HI","ID","IL","IN","IA","KS","KY","LA","ME","MD",
@@ -33,6 +32,7 @@ export default function App() {
   const [loading,    setLoading]    = useState(false)
   const [error,      setError]      = useState(null)
   const [parsing,    setParsing]    = useState(false)
+  const [notice,     setNotice]     = useState(null)  
 
   const updateProfile = (k, v) =>
     setProfile(p => ({ ...p, [k]: v }))

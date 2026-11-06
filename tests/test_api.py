@@ -157,7 +157,7 @@ def test_recommend_invalid_age_group():
     })
     assert r.status_code == 422
 
-
+# ── Parse profile (rule-based, optional Groq fallback) ───────────────────────
 def test_parse_profile_basic():
     r = client.post("/parse-profile", json={
         "text": "I am 32, make 70k a year in Dallas TX, family of 3, used is fine"})
@@ -172,6 +172,19 @@ def test_parse_profile_basic():
     assert d["prefer_new"] is None
 
 
-def test_parse_profile_needs_income():
+def test_parse_profile_needs_income(monkeypatch):
+    monkeypatch.delenv("GROQ_API_KEY", raising=False)   # test the rules alone
     r = client.post("/parse-profile", json={"text": "I need a cheap car"})
     assert r.status_code == 422
+
+
+def test_parse_profile_pension():
+    r = client.post("/parse-profile", json={
+        "text": "retired with a pension of 4500, live on a farm in Iowa, want a new car"})
+    assert r.status_code == 200
+    d = r.json()
+    assert d["monthly_income"] == 4500
+    assert d["age_group"] == "65+"
+    assert d["area_type"] == "rural"
+    assert d["state"] == "IA"
+    assert d["prefer_new"] is True

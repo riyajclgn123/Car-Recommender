@@ -1,5 +1,6 @@
 import axios from "axios"
 
+// Local dev uses 8080; on Vercel set VITE_API_URL to the deployed API URL
 const BASE = import.meta.env.VITE_API_URL || "http://localhost:8080"
 
 export const predictPrice = (data) =>

@@ -10,6 +10,9 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from api.routes import predict, tco, recommend, parse
 from api.predictor import load_all_models
+from dotenv import load_dotenv
+load_dotenv()
+
 import logging
 
 logging.basicConfig(level=logging.INFO,
