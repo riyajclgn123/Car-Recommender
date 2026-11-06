@@ -34,16 +34,18 @@ holdout_vins = pl.concat([
 cargurus = inv.join(holdout_vins, on="vin", how="semi")
 cargurus = cargurus.sample(n=min(80_000, len(cargurus)), seed=42)
 
-carvana = inv.filter(pl.col("vin").str.starts_with("CVN_"))
+# Carvana cars with real borrowed specs + drift-adjusted fair prices
+# (unmatched Carvana names are left out: no specs, no honest estimate)
+carvana = pl.read_parquet(f"{PROC}/carvana_enriched.parquet")
 
 # Batch scoring with the shared, parity-tested inference code
 model = joblib.load("models/lgbm_tuned.pkl")
 meta = load_meta()
 preds = predict_prices(cargurus, model, meta)
 cargurus = cargurus.with_columns(pl.Series("predicted_price", preds))
-carvana = carvana.with_columns(pl.lit(None, dtype=pl.Float64).alias("predicted_price"))
 
-deploy = pl.concat([cargurus.select(KEEP), carvana.select(KEEP)])
+
+deploy = pl.concat([cargurus.select(KEEP), carvana.select(KEEP)], how="vertical_relaxed")
 deploy.write_parquet(f"{PROC}/inventory_deploy.parquet", compression="zstd")
 
 # Sanity report
@@ -53,5 +55,5 @@ below = np.mean(actual < preds * 0.95) * 100
 above = np.mean(actual > preds * 1.05) * 100
 print(f"CarGurus (out-of-sample): {len(cargurus):,}  MAE ${mae:,.0f}")
 print(f"Listed >5% below fair price: {below:.1f}%   >5% above: {above:.1f}%")
-print(f"Carvana (no estimate yet): {len(carvana):,}")
+print(f"Carvana (enriched specs, drift-adjusted fair price): {len(carvana):,}")
 print(f"Total: {len(deploy):,} → {PROC}/inventory_deploy.parquet")
