@@ -63,7 +63,7 @@ def recommend(req: RecommendRequest):
         req.household_size, req.area_type)
 
     # Load candidates
-    df = pl.read_parquet(PROC / "cleaned.parquet")
+    df = pl.read_parquet(PROC / "inventory.parquet")
     if len(df) > req.n_candidates:
         df = df.sample(n=req.n_candidates, seed=42)
 
