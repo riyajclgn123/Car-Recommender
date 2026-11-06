@@ -8,7 +8,7 @@ Run:
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from api.routes import predict, tco, recommend
+from api.routes import predict, tco, recommend, parse
 from api.predictor import load_all_models
 import logging
 
@@ -37,6 +37,7 @@ async def startup():
 app.include_router(predict.router,   tags=["Price"])
 app.include_router(tco.router,       tags=["TCO"])
 app.include_router(recommend.router, tags=["Recommend"])
+app.include_router(parse.router, tags=["Intake"])
 
 @app.get("/")
 def root():

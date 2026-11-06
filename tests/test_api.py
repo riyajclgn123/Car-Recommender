@@ -156,3 +156,22 @@ def test_recommend_invalid_age_group():
         "state":          "CA",
     })
     assert r.status_code == 422
+
+
+def test_parse_profile_basic():
+    r = client.post("/parse-profile", json={
+        "text": "I am 32, make 70k a year in Dallas TX, family of 3, used is fine"})
+    assert r.status_code == 200
+    d = r.json()
+    assert round(d["monthly_income"]) == 5833
+    assert d["age_group"] == "18-34"
+    assert d["household_size"] == 3
+    assert d["state"] == "TX"
+    assert d["area_type"] == "urban"
+    assert d["income_band"] == "middle"
+    assert d["prefer_new"] is None
+
+
+def test_parse_profile_needs_income():
+    r = client.post("/parse-profile", json={"text": "I need a cheap car"})
+    assert r.status_code == 422

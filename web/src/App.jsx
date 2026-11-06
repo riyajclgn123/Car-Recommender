@@ -1,10 +1,11 @@
 import { useState } from "react"
 import CarCard from "./components/CarCard"
-import { getRecommendations, parseProfileWithClaude } from "./api"
+import { getRecommendations, parseProfileFromText } from "./api"
 
 const AGE_GROUPS   = ["18-34", "35-54", "55-64", "65+"]
 const INCOME_BANDS = ["low", "middle", "high"]
 const AREA_TYPES   = ["urban", "suburban", "rural"]
+const [notice,     setNotice]     = useState(null)
 const US_STATES    = [
   "AL","AK","AZ","AR","CA","CO","CT","DE","FL","GA",
   "HI","ID","IL","IN","IA","KS","KY","LA","ME","MD",
@@ -36,16 +37,20 @@ export default function App() {
   const updateProfile = (k, v) =>
     setProfile(p => ({ ...p, [k]: v }))
 
-  const handleParseText = async () => {
+    const handleParseText = async () => {
     if (!freeText.trim()) return
     setParsing(true)
     setError(null)
+    setNotice(null)
     try {
-      const parsed = await parseProfileWithClaude(freeText)
-      setProfile({ ...DEFAULT_PROFILE, ...parsed })
+      const { assumed, ...fields } = await parseProfileFromText(freeText)
+      setProfile({ ...DEFAULT_PROFILE, ...fields })
+      if (assumed?.length) {
+        setNotice(`I assumed: ${assumed.join(", ")}. Adjust the form if that's wrong.`)
+      }
       setMode("form")
     } catch (e) {
-      setError("Couldn't parse that — try filling the form directly.")
+      setError(e.response?.data?.detail || "Couldn't parse that — try the form.")
     } finally {
       setParsing(false)
     }
@@ -145,6 +150,13 @@ export default function App() {
             >
               {parsing ? "Parsing…" : "✨ Parse with Claude"}
             </button>
+          </div>
+        )}
+
+        {notice && (
+          <div className="bg-amber-50 border border-amber-200 text-amber-800
+                          rounded-xl p-3 mb-4 text-sm">
+            {notice}
           </div>
         )}
 
