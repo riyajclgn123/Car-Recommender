@@ -1,0 +1,27 @@
+{
+  "age_map": {
+    "18-34": 0,
+    "35-54": 1,
+    "55-64": 2,
+    "65+": 3
+  },
+  "income_map": {
+    "low": 0,
+    "middle": 1,
+    "high": 2
+  },
+  "area_map": {
+    "urban": 0,
+    "suburban": 1,
+    "rural": 2
+  },
+  "classes": [
+    "minivan_van",
+    "other",
+    "pickup",
+    "sedan",
+    "suv_crossover"
+  ],
+  "macro_f1": 0.1545619221848297,
+  "log_loss": 1.4310223766957386
+}
