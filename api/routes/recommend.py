@@ -8,6 +8,18 @@ from src.recommender.rank    import diversity_rank
 from src.cost.tco import compute_tco, get_maintenance_5yr
 import numpy as np
 
+import os
+from functools import lru_cache
+from pathlib import Path
+
+INVENTORY_PATH = Path(os.getenv("INVENTORY_PATH", "data/processed/inventory.parquet"))
+
+
+@lru_cache(maxsize=1)
+def load_inventory():
+    """Read the car inventory once and keep it in memory."""
+    return pl.read_parquet(INVENTORY_PATH)
+
 router = APIRouter()
 PROC   = __import__("pathlib").Path("data/processed")
 
@@ -63,7 +75,7 @@ def recommend(req: RecommendRequest):
         req.household_size, req.area_type)
 
     # Load candidates
-    df = pl.read_parquet(PROC / "inventory.parquet")
+    df = load_inventory()
     if len(df) > req.n_candidates:
         df = df.sample(n=req.n_candidates, seed=42)
 
